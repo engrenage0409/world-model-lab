@@ -7,6 +7,7 @@ import torch
 from torch import nn
 from torch.distributions import Normal,kl_divergence
 import torch.nn.functional as F
+from world_model.vision_losses import image_objective
 
 class CNNEncoder(nn.Module):
     def __init__(self,embed_dim=256):
@@ -75,17 +76,19 @@ class RSSMWorldModel(nn.Module):
     def decode(self,state):
         s=self.features(state)
         return self.decoder(s),self.reward_head(s).squeeze(-1),self.continue_head(s).squeeze(-1)
-    def loss(self,observations,actions,rewards,dones,kl_scale=0.01,free_nats=1.0,reward_scale=10.0):
+    def loss(self,observations,actions,rewards,dones,kl_scale=0.01,free_nats=1.0,reward_scale=10.0,recon_mode="mse",ssim_weight=0.2,edge_weight=0.1):
         """Aligned arrays: observations[B,T+1,3,96,96], actions/rewards/dones[B,T,...].
         Decoder reconstructs o_(t+1), reward predicts r_t, continue predicts 1-done_t.
         """
         state=self.observe_first(observations[:,0])
         total_rec,total_rew,total_cont,total_kl=0.,0.,0.,0.
+        total_pixel_mse=0.
         steps=actions.shape[1]
         for t in range(steps):
             state,prior,posterior=self.observe_step(state,actions[:,t],observations[:,t+1])
             reconstructed,pred_reward,pred_continue=self.decode(state)
-            rec=F.mse_loss(reconstructed,observations[:,t+1])
+            rec=image_objective(reconstructed,observations[:,t+1],recon_mode,ssim_weight,edge_weight)
+            total_pixel_mse=total_pixel_mse+F.mse_loss(reconstructed,observations[:,t+1])
             rew=F.smooth_l1_loss(pred_reward,rewards[:,t]/reward_scale)
             cont=F.binary_cross_entropy_with_logits(pred_continue,1-dones[:,t])
             kl=kl_divergence(posterior,prior).sum(-1).mean()
@@ -95,7 +98,7 @@ class RSSMWorldModel(nn.Module):
             total_kl=total_kl+torch.clamp(kl,min=free_nats)
         rec,rew,cont,kl=(x/steps for x in (total_rec,total_rew,total_cont,total_kl))
         loss=rec+rew+0.1*cont+kl_scale*kl
-        return {"loss":loss,"recon_mse":rec,"reward_smooth_l1":rew,"continue_bce":cont,"kl_nats":kl}
+        return {"loss":loss,"recon_mse":total_pixel_mse/steps,"recon_objective":rec,"reward_smooth_l1":rew,"continue_bce":cont,"kl_nats":kl}
     @torch.no_grad()
     def predict_open_loop(self,start_image,actions):
         """Reconstruct future frames using only initial image and supplied future actions."""
