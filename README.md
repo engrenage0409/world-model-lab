@@ -197,3 +197,22 @@ python -m scripts.evaluate_world_model --data data/episodes_v2 --checkpoint chec
 
 The full V1/V2/V3 architecture matrix, source repositories, and unfinished
 agent components are in [docs/dreamer_versions.md](docs/dreamer_versions.md).
+
+## Verified upstream Dreamer source integration (V1 / V2 / V3)
+
+For full agent baselines, do **not** mistake our simplified RSSM implementations
+for complete Dreamer agents. We now maintain separately pinned copies of
+real upstream sources, downloaded only on demand. See the
+[baseline installation and compatibility guide](baselines/README.md) and
+[version-locked source manifest](baselines/sources.json).
+
+```powershell
+python -m scripts.setup_baselines --version all --dry-run
+python -m scripts.setup_baselines --version v3
+```
+
+Upstream repos are cloned under `external/` and do not overwrite our local
+PyTorch models, CarRacing datasets, or checkpoints. Their old dependencies
+must be isolated, and a **CarRacing-v3 adapter is still required** before
+claiming upstream Dreamer agent training. Compatible pretrained CarRacing-v3
+checkpoints are not verified.
