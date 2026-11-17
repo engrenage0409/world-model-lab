@@ -157,3 +157,27 @@ a vector of 1..T-step errors averaged over validation windows. The
 validation split is at the episode level. Longer-horizon prediction and
 more diverse trajectories are still future research steps; no claim is
 made that the new loss necessarily improves generalization.
+
+## Next experiments: data scale and three Dreamer architecture tracks
+
+The immediate bottleneck may be only five short random trajectories. A new
+non-overwriting, manifest-producing collector supports three policies
+(`random`, `smooth`, `mixed`) and runs separately from the original collector:
+
+```powershell
+python -m scripts.collect_diverse_data --episodes 50 --max-steps 500 --policy mixed --out data/episodes_v2
+python -m scripts.train_world_model --data data/episodes_v2 --epochs 30 --seq-len 8 --batch-size 2 --out checkpoints/gaussian_50ep_best.pt
+python -m scripts.evaluate_world_model --data data/episodes_v2 --checkpoint checkpoints/gaussian_50ep_best.pt --out results/gaussian_50ep_eval.json
+```
+
+These policies are exploratory, not expert drivers. Larger data alone does not
+guarantee accurate on-road dynamics. Old `data/episodes` and `checkpoints/`
+are unchanged.
+
+See [DreamerV1/V2/V3 architecture and open-source reuse plan](docs/dreamer_versions.md).
+The current Gaussian model corresponds to an **incomplete V1 world-model
+baseline**, the categorical model is a **V2/V3-inspired hybrid**, and a full
+V3 training/actor/critic implementation is **not yet present**. Each version
+should eventually get its own architecture, independent checkpoint format, and
+a shared evaluation on common CarRacing trajectories. Do not claim a full
+DreamerV1/V2/V3 reproduction from these baselines.
