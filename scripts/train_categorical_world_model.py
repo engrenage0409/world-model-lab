@@ -27,6 +27,9 @@ def main():
     parser.add_argument("--embed", type=int, default=256)
     parser.add_argument("--unimix", type=float, default=0.01)
     parser.add_argument("--dyn-scale", type=float, default=0.05)
+    parser.add_argument("--recon-mode", choices=["mse","l1_ssim_edge"], default="mse")
+    parser.add_argument("--ssim-weight", type=float, default=0.2)
+    parser.add_argument("--edge-weight", type=float, default=0.1)
     parser.add_argument("--rep-scale", type=float, default=0.01)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", default="checkpoints/categorical_best.pt")
@@ -66,7 +69,9 @@ def main():
                 with torch.set_grad_enabled(training):
                     losses = model.loss(
                         **batch, dyn_scale=args.dyn_scale,
-                        rep_scale=args.rep_scale)
+                        rep_scale=args.rep_scale,
+                        recon_mode=args.recon_mode, ssim_weight=args.ssim_weight,
+                        edge_weight=args.edge_weight)
                     if training:
                         optimizer.zero_grad(set_to_none=True)
                         losses["loss"].backward()
@@ -87,6 +92,8 @@ def main():
                 "val_files": [path.name for path in val_files],
                 "seq_len": args.seq_len,
                 "dyn_scale": args.dyn_scale, "rep_scale": args.rep_scale,
+                "recon_mode": args.recon_mode, "ssim_weight": args.ssim_weight,
+                "edge_weight": args.edge_weight,
             }, output)
             print("Saved", output)
     print("Best validation loss:", best, "device:", device)
