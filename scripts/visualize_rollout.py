@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from PIL import Image,ImageDraw
 from world_model.data import SequenceDataset
-from world_model.rssm import RSSMWorldModel
+from world_model.checkpoints import model_from_checkpoint
 
 def img(t):
     return Image.fromarray((t.clamp(0,1).permute(1,2,0).cpu().numpy()*255).astype("uint8"))
@@ -18,8 +18,8 @@ def main():
     a=p.parse_args()
     device="cuda" if torch.cuda.is_available() else "cpu"
     ckpt=torch.load(a.checkpoint,map_location="cpu",weights_only=True)
-    model=RSSMWorldModel(**ckpt["config"]).to(device)
-    model.load_state_dict(ckpt["model"]);model.eval()
+    model=model_from_checkpoint(ckpt).to(device)
+    model.eval()
     paths=[Path(a.data)/name for name in ckpt["val_files"]]
     sample=SequenceDataset(paths,ckpt["seq_len"],ckpt["seq_len"])[a.index]
     with torch.inference_mode():
