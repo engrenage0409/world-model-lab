@@ -17,6 +17,9 @@ def main():
     p.add_argument("--batch-size",type=int,default=2)
     p.add_argument("--lr",type=float,default=3e-4)
     p.add_argument("--kl-scale",type=float,default=0.01)
+    p.add_argument("--recon-mode",choices=["mse","l1_ssim_edge"],default="mse")
+    p.add_argument("--ssim-weight",type=float,default=0.2)
+    p.add_argument("--edge-weight",type=float,default=0.1)
     p.add_argument("--out",default="checkpoints/rssm_best.pt")
     p.add_argument("--seed",type=int,default=42)
     a=p.parse_args()
@@ -39,7 +42,7 @@ def main():
             for batch in tqdm(loader,desc=f"Epoch {epoch} {split}"):
                 batch={k:v.to(device) for k,v in batch.items()}
                 with torch.set_grad_enabled(split=="train"):
-                    losses=model.loss(**batch,kl_scale=a.kl_scale)
+                    losses=model.loss(**batch,kl_scale=a.kl_scale,recon_mode=a.recon_mode,ssim_weight=a.ssim_weight,edge_weight=a.edge_weight)
                     loss=losses["loss"]
                     if split=="train":
                         optimizer.zero_grad(set_to_none=True)
@@ -52,7 +55,7 @@ def main():
         if summaries["val"]["loss"]<best:
             best=summaries["val"]["loss"]
             torch.save({"model":model.state_dict(),"config":{"hidden":256,"stoch":32,"embed":256},
-                        "epoch":epoch,"val":summaries["val"],"train_files":[x.name for x in train_files],
+                        "epoch":epoch,"recon_mode":a.recon_mode,"ssim_weight":a.ssim_weight,"edge_weight":a.edge_weight,"val":summaries["val"],"train_files":[x.name for x in train_files],
                         "val_files":[x.name for x in val_files],"seq_len":a.seq_len},out)
             print("Saved",out)
     print("Best validation loss:",best,"device:",device)
