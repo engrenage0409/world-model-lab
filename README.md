@@ -130,3 +130,30 @@ loss* checkpoint, not necessarily epoch 30. The default KL weights (`--dyn-scale
 0.05 --rep-scale 0.01`) are deliberately small for the existing mean-pixel-MSE
 scale; they are **not** official DreamerV3 loss coefficients. This prototype
 does not include Block GRU, symlog/two-hot, policy learning or online replay.
+
+## Vision reconstruction ablation (experimental)
+
+Both Gaussian and Categorical RSSMs now accept `--recon-mode mse`
+(default, backward compatible) or `--recon-mode l1_ssim_edge` with
+`--ssim-weight 0.2 --edge-weight 0.1`. The latter trains with
+L1 + a lightweight local 3x3 SSIM surrogate + image-gradient L1.
+This is **not** DreamerV3's official visual loss. Training logs
+`recon_mse` for comparability and `recon_objective` for the optimized
+reconstruction loss. Comparing total losses across modes is invalid;
+compare held-out image metrics and visualizations instead.
+
+To compare the Gaussian baseline under the *same data and seed*:
+
+```powershell
+python -m pytest -q
+python -m scripts.evaluate_world_model --checkpoint checkpoints/rssm_30ep.pt --out results/gaussian_30ep_eval.json
+python -m scripts.train_world_model --data data/episodes --epochs 30 --seq-len 8 --batch-size 2 --recon-mode l1_ssim_edge --out checkpoints/gaussian_vision_best.pt
+python -m scripts.evaluate_world_model --checkpoint checkpoints/gaussian_vision_best.pt --out results/gaussian_vision_eval.json
+python -m scripts.compare_reconstruction --checkpoint checkpoints/gaussian_vision_best.pt --out results/gaussian_vision.png
+```
+
+`evaluate_world_model` now also writes `open_loop_frame_mse_by_step`,
+a vector of 1..T-step errors averaged over validation windows. The
+validation split is at the episode level. Longer-horizon prediction and
+more diverse trajectories are still future research steps; no claim is
+made that the new loss necessarily improves generalization.
