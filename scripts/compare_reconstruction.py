@@ -10,7 +10,7 @@ import torch
 from PIL import Image, ImageDraw
 
 from world_model.data import SequenceDataset
-from world_model.rssm import RSSMWorldModel
+from world_model.checkpoints import model_from_checkpoint
 
 
 def to_image(frame):
@@ -83,8 +83,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
-    model = RSSMWorldModel(**checkpoint["config"]).to(device)
-    model.load_state_dict(checkpoint["model"])
+    model = model_from_checkpoint(checkpoint).to(device)
     model.eval()
 
     files = [Path(args.data) / name for name in checkpoint["val_files"]]
