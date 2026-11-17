@@ -32,7 +32,7 @@ def main():
             if step_sse is None: step_sse=torch.zeros_like(batch_step_mse)
             step_sse+=batch_step_mse*target.shape[0]
             step_count+=target.shape[0]
-            rew_sum+=(rewards*10-batch["rewards"]).abs().sum().item()
+            rew_sum+=(rewards*ckpt.get("reward_multiplier",10.0)-batch["rewards"]).abs().sum().item()
             num_frames+=target.numel()
             total+=batch["rewards"].numel()
     result={"val_episodes":ckpt["val_files"],"windows":len(val.dataset),
