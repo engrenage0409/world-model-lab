@@ -6,6 +6,7 @@ from torch.distributions import OneHotCategoricalStraightThrough
 import torch.nn.functional as F
 
 from world_model.rssm import CNNEncoder, CNNDecoder
+from world_model.vision_losses import image_objective
 
 
 @dataclass
@@ -91,10 +92,11 @@ class CategoricalRSSM(nn.Module):
                 representation.clamp_min(free_nats).mean())
 
     def loss(self, observations, actions, rewards, dones, dyn_scale=0.05,
-             rep_scale=0.01, free_nats=1.0, reward_scale=10.0):
+             rep_scale=0.01, free_nats=1.0, reward_scale=10.0,
+             recon_mode="mse", ssim_weight=0.2, edge_weight=0.1):
         state = self.observe_first(observations[:, 0])
         sums = {key: observations.new_zeros(()) for key in
-                ("recon_mse", "reward_smooth_l1", "continue_bce", "dyn_kl", "rep_kl")}
+                ("recon_mse", "recon_objective", "reward_smooth_l1", "continue_bce", "dyn_kl", "rep_kl")}
         steps = actions.shape[1]
         if steps < 1:
             raise ValueError("Sequence must contain at least one action")
@@ -105,6 +107,8 @@ class CategoricalRSSM(nn.Module):
             dyn, rep = self.balanced_kl(posterior, prior, free_nats)
             sums["recon_mse"] = sums["recon_mse"] + F.mse_loss(
                 frame, observations[:, t + 1])
+            sums["recon_objective"] = sums["recon_objective"] + image_objective(
+                frame, observations[:, t + 1], recon_mode, ssim_weight, edge_weight)
             sums["reward_smooth_l1"] = sums["reward_smooth_l1"] + F.smooth_l1_loss(
                 reward, rewards[:, t] / reward_scale)
             sums["continue_bce"] = sums["continue_bce"] + F.binary_cross_entropy_with_logits(
@@ -113,7 +117,7 @@ class CategoricalRSSM(nn.Module):
             sums["rep_kl"] = sums["rep_kl"] + rep
         sums = {key: value / steps for key, value in sums.items()}
         sums["loss"] = (
-            sums["recon_mse"] + sums["reward_smooth_l1"] +
+            sums["recon_objective"] + sums["reward_smooth_l1"] +
             0.1 * sums["continue_bce"] +
             dyn_scale * sums["dyn_kl"] + rep_scale * sums["rep_kl"])
         return sums
