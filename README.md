@@ -98,3 +98,35 @@ Evaluation reports held-out **action-conditioned open-loop** image MSE and rewar
 See [detailed roadmap](docs/roadmap.md) for the actor/critic + imagined λ-return phase, DreamerV2/V3 improvements, JEPA / action-conditioned JEPA and Atlas-inspired 3DGS reconstruction. See [reading list](docs/reading-list.md) for original papers.
 
 **Reproducibility:** fix episode splits, seeds and library versions, collect more diverse episodes, log per-episode returns, and evaluate on fresh held-out trajectories. This repository is educational research code, not production autonomous driving.
+
+## Experimental categorical RSSM (DreamerV3-inspired, not full DreamerV3)
+
+The existing Gaussian RSSM and its checkpoint are unchanged. A second model,
+`world_model/categorical_rssm.py`, has discrete one-hot stochastic state
+(`groups=16`, `classes=16`) with 1% uniform probability mixing, a straight-through
+gradient estimator, and separately stop-gradiented Dynamics and Representation
+KL losses with per-sample free nats. It uses the same CNN reconstruction,
+reward Smooth L1, and continuation BCE heads as the Gaussian baseline.
+
+To compare, first make sure the old model and five episode files are present.
+The categorical model trains **from scratch**; no Gaussian weights are reused.
+
+```powershell
+git pull origin main
+python -m pytest -q
+python -m scripts.train_categorical_world_model --data data/episodes --epochs 30 --seq-len 8 --batch-size 2 --out checkpoints/categorical_best.pt
+python -m scripts.evaluate_world_model --checkpoint checkpoints/categorical_best.pt --out results/categorical_eval.json
+python -m scripts.compare_reconstruction --checkpoint checkpoints/categorical_best.pt --out results/categorical_comparison.png
+```
+
+The original Gaussian checkpoint can still be assessed with
+`python -m scripts.evaluate_world_model --checkpoint checkpoints/rssm_best.pt`.
+The checkpoint stores `model_type` and configuration, and the shared evaluation
+and visualization scripts detect the correct model.
+
+**Fair-comparison notes:** hold the episode split, seed, sequence length, training
+budget, action data and metrics fixed. A 30-epoch run saves the *lowest validation
+loss* checkpoint, not necessarily epoch 30. The default KL weights (`--dyn-scale
+0.05 --rep-scale 0.01`) are deliberately small for the existing mean-pixel-MSE
+scale; they are **not** official DreamerV3 loss coefficients. This prototype
+does not include Block GRU, symlog/two-hot, policy learning or online replay.
