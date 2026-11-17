@@ -181,3 +181,19 @@ V3 training/actor/critic implementation is **not yet present**. Each version
 should eventually get its own architecture, independent checkpoint format, and
 a shared evaluation on common CarRacing trajectories. Do not claim a full
 DreamerV1/V2/V3 reproduction from these baselines.
+
+### Experimental V3-style third model
+
+In addition to the original Gaussian RSSM and the categorical V2/V3 hybrid,
+the separate `V3RSSM` adds a categorical reward distribution with
+`symlog` targets and `twohot` cross-entropy. It remains an **incomplete
+V3-style prototype**, not a claim of reproduced DreamerV3 results.
+
+```powershell
+python -m pytest -q
+python -m scripts.train_v3_world_model --data data/episodes_v2 --epochs 30 --out checkpoints/v3_experimental_best.pt
+python -m scripts.evaluate_world_model --data data/episodes_v2 --checkpoint checkpoints/v3_experimental_best.pt --out results/v3_experimental_eval.json
+```
+
+The full V1/V2/V3 architecture matrix, source repositories, and unfinished
+agent components are in [docs/dreamer_versions.md](docs/dreamer_versions.md).
