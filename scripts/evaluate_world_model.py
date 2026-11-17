@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 from world_model.data import SequenceDataset
-from world_model.rssm import RSSMWorldModel
+from world_model.checkpoints import model_from_checkpoint
 
 def main():
     p=argparse.ArgumentParser()
@@ -15,8 +15,8 @@ def main():
     a=p.parse_args()
     device="cuda" if torch.cuda.is_available() else "cpu"
     ckpt=torch.load(a.checkpoint,map_location="cpu",weights_only=True)
-    model=RSSMWorldModel(**ckpt["config"]).to(device)
-    model.load_state_dict(ckpt["model"]);model.eval()
+    model=model_from_checkpoint(ckpt).to(device)
+    model.eval()
     files=[Path(a.data)/x for x in ckpt["val_files"]]
     val=DataLoader(SequenceDataset(files,ckpt["seq_len"],ckpt["seq_len"]),
                    batch_size=a.batch_size,shuffle=False,num_workers=0)
