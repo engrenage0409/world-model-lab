@@ -8,3 +8,6 @@ checkpoints/
 results/
 videos/
 wandb/
+
+# External upstream checkouts (reproducibly installed from baselines/sources.json)
+/external/
