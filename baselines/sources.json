@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "version": "v1",
+      "name": "Official Dreamer V1",
+      "folder": "dreamer_v1",
+      "url": "https://github.com/danijar/dreamer.git",
+      "commit": "56d4d444dfd0582b0e79dab80aebbea74c0ce40d",
+      "framework": "TensorFlow 2.2",
+      "license": "MIT",
+      "carracing_v3": "adapter_required"
+    },
+    {
+      "version": "v2",
+      "name": "PyDreamer V2",
+      "folder": "dreamer_v2",
+      "url": "https://github.com/jurgisp/pydreamer.git",
+      "commit": "8a4ea85a925b57ddf24a221b41dfb3257f89d63a",
+      "framework": "PyTorch with legacy Gym",
+      "license": "MIT",
+      "carracing_v3": "adapter_required"
+    },
+    {
+      "version": "v3",
+      "name": "DreamerV3-PyTorch",
+      "folder": "dreamer_v3",
+      "url": "https://github.com/burchim/DreamerV3-PyTorch.git",
+      "commit": "a6ee1d86cf3e387694d58a49aa3e81a5b010d8c5",
+      "framework": "PyTorch with legacy Gym and DMC",
+      "license": "Apache-2.0",
+      "carracing_v3": "adapter_required"
+    }
+  ]
+}
